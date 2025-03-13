@@ -1,127 +1,94 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load data
-df = pd.read_csv('data.csv')
-# print(df.head())
+# load data
+df = pd.read_csv('data.csv', parse_dates=['date_time'])
 
-# # Summary statistics
-# print(df.describe())
+# data summary
+print(df.head())
+print(df.describe())
 
-# # Missing values
-# print("\nMissing values:")
-# print(df.isnull().sum())
-
-# # Data distribution - histograms
-# plt.figure(figsize=(10, 8))
-# sns.histplot(df['performance'], kde=True)
-# plt.title('Distribution of Performance')
-# plt.xlabel('Performance')
-# plt.ylabel('Frequency')
-# plt.show()
-
-# plt.figure(figsize=(10, 8))
-# sns.histplot(df['age'], kde=True)
-# plt.title('Distribution of Age')
-# plt.xlabel('Age')
-# plt.ylabel('Frequency')
-# plt.show()
-
-# # Categorical variables - count plots
-# plt.figure(figsize=(8, 6))
-# sns.countplot(x='feedback', data=df)
-# plt.title('Feedback Counts')
-# plt.xlabel('Feedback')
-# plt.ylabel('Count')
-# plt.show()
-
-# plt.figure(figsize=(8, 6))
-# sns.countplot(x='gender', data=df)
-# plt.title('Gender Distribution')
-# plt.xlabel('Gender')
-# plt.ylabel('Count')
-# plt.show()
-
-# plt.figure(figsize=(8, 6))
-# sns.countplot(x='state', data=df)
-# plt.title('State Distribution')
-# plt.xlabel('State')
-# plt.ylabel('Count')
-# plt.show()
-
-# # Correlation matrix
-# plt.figure(figsize=(10, 8))
-# sns.heatmap(df[['performance', 'trip_number', 'age', 'income']].corr(), annot=True, cmap='coolwarm', fmt=".2f")
-# plt.title('Correlation Matrix')
-# plt.show()
-
-
-# Performance by gender
-plt.figure(figsize=(8, 6))
-sns.boxplot(x='gender', y='performance', data=df)
-plt.title('Performance Ratings by Gender')
-plt.xlabel('Gender')
-plt.ylabel('Performance Rating')
+# Q1: EDA
+# 1. performance distribution
+plt.figure(figsize=(12, 5))
+plt.subplot(1, 2, 1)
+sns.histplot(df['performance'], kde=True, bins=30)
+plt.title('performance distribution')
+plt.subplot(1, 2, 2)
+sns.boxplot(x=df['performance'])
+plt.title('performance boxplot')
+plt.tight_layout()
 plt.show()
 
-# Trip frequency by state
+# 2. age and performance
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='age', y='performance', data=df, alpha=0.6)
+plt.title('age vs. performance')
+plt.xlabel('age')
+plt.ylabel('performance')
+plt.tight_layout()
+plt.show()
+
+# 3. gnder difference（assume 1=Female, 0=Male）
+gender_group = df.groupby('gender').agg(
+    avg_performance=('performance', 'mean'),
+    feedback_rate=('feedback', 'mean'),
+    avg_trip=('trip_number', 'mean')
+).reset_index()
+gender_group['gender'] = gender_group['gender'].map({0: 'Male', 1: 'Female'})
+
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 3, 1)
+sns.barplot(x='gender', y='avg_performance', data=gender_group)
+plt.title('gender and average performance')
+plt.subplot(1, 3, 2)
+sns.barplot(x='gender', y='feedback_rate', data=gender_group)
+plt.title('gender and feedback rate')
+plt.subplot(1, 3, 3)
+sns.barplot(x='gender', y='avg_trip', data=gender_group)
+plt.title('gnder and average trip number')
+plt.tight_layout()
+plt.show()
+
+# 4. performance by state
+state_performance = df.groupby('state')['performance'].mean().sort_values(ascending=False)
+plt.figure(figsize=(10, 6))
+sns.barplot(x=state_performance.values, y=state_performance.index, palette='viridis')
+plt.title('average perfomance by state')
+plt.xlabel('performance')
+plt.ylabel('state')
+plt.tight_layout()
+plt.show()
+
+# Q2: sub sample analysis（use median as indicator variable）
+median_perf = df['performance'].median()
+df['performance_group'] = df['performance'].apply(lambda x: 'High' if x >= median_perf else 'Low')
+
+# performance group comparison
+group_comparison = df.groupby('performance_group').agg(
+    avg_trip=('trip_number', 'mean'),
+    feedback_rate=('feedback', 'mean'),
+    avg_age=('age', 'mean'),
+    avg_income=('income', 'mean')
+).reset_index()
+
+print("\nPerformance group comparison:")
+print(group_comparison)
+
+# visualization
 plt.figure(figsize=(12, 8))
-sns.barplot(x='state', y='trip_number', data=df)
-plt.title('Average Trip Frequencies by State')
-plt.xlabel('State')
-plt.ylabel('Average Trip Number')
-plt.xticks(rotation=45)
-plt.show()
-
-# Income vs. performance
-plt.figure(figsize=(10, 8))
-sns.scatterplot(x='income', y='performance', data=df)
-plt.title('Income vs. Performance')
-plt.xlabel('Income')
-plt.ylabel('Performance Rating')
-plt.show()
-
-
-
-
-# Filter data for a specific age group (e.g., drivers aged 30-40)
-age_group = df[(df['age'] >= 30) & (df['age'] <= 40)]
-# Scatter plot for income vs. performance for the age group
-plt.figure(figsize=(10, 8))
-sns.scatterplot(x='income', y='performance', data=age_group)
-plt.title('Income vs. Performance for Drivers Aged 30-40')
-plt.xlabel('Income')
-plt.ylabel('Performance Rating')
-plt.show()
-
-# Filter data for a specific gender (e.g. 1)
-gender_group = df[df['gender'] == 1]
-# Scatter plot for income vs. performance for the gender group
-plt.figure(figsize=(10, 8))
-sns.scatterplot(x='income', y='performance', data=gender_group)
-plt.title('Income vs. Performance for Male Drivers')
-plt.xlabel('Income')
-plt.ylabel('Performance Rating')
-plt.show()
-
-
-# Scatter plot with color coded by gender
-plt.figure(figsize=(10, 8))
-sns.scatterplot(x='income', y='performance', hue='gender', data=df, palette='Set1')
-plt.title('Income vs. Performance (Color Coded by Gender)')
-plt.xlabel('Income')
-plt.ylabel('Performance Rating')
-plt.legend(title='Gender')
-plt.show()
-
-
-# Scatter plot with color coded by state
-plt.figure(figsize=(12, 8))
-sns.scatterplot(x='income', y='performance', hue='state', data=df, palette='viridis', legend='full')
-plt.title('Income vs. Performance (Color Coded by State)')
-plt.xlabel('Income')
-plt.ylabel('Performance Rating')
-plt.legend(title='State', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.subplot(2, 2, 1)
+sns.barplot(x='performance_group', y='avg_trip', data=group_comparison)
+plt.title('average trip number')
+plt.subplot(2, 2, 2)
+sns.barplot(x='performance_group', y='feedback_rate', data=group_comparison)
+plt.title('feedback rate')
+plt.subplot(2, 2, 3)
+sns.barplot(x='performance_group', y='avg_age', data=group_comparison)
+plt.title('average age')
+plt.subplot(2, 2, 4)
+sns.barplot(x='performance_group', y='avg_income', data=group_comparison)
+plt.title('average income')
+plt.tight_layout()
 plt.show()
